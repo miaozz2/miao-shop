@@ -27,21 +27,29 @@ Run a single test file: `npx jest src/app.controller.spec.ts`
 
 ## Architecture
 
-Standard NestJS modular architecture:
+Feature-based modular architecture:
 
-- **Entry point**: [src/main.ts](src/main.ts) - Creates the NestFactory app and listens on `process.env.PORT ?? 3000`
-- **Root module**: [src/app.module.ts](src/app.module.ts) - Root module importing controllers and providers
-- **Controllers**: [src/app.controller.ts](src/app.controller.ts) - Handles HTTP requests via decorators
-- **Services**: [src/app.service.ts](src/app.service.ts) - Business logic via `@Injectable()` decorator
+- **Entry point**: [src/main.ts](src/main.ts) - Bootstrap, global pipes/filters/interceptors, `setGlobalPrefix('api')`
+- **Root module**: [src/app.module.ts](src/app.module.ts) - Imports ConfigModule, DatabaseModule, AuthModule, UserModule, LogsModule
+- **Config** ([src/config/](src/config/)) - Domain-specific configs (`appConfig`, `jwtConfig`, `bcryptConfig`, `signatureConfig`, `databaseConfig`) + Joi `envValidationSchema`
+- **Database** ([src/database/](src/database/)) - `DatabaseModule` wraps `TypeOrmModule.forRootAsync()`
+- **Core** ([src/core/](src/core/)) - Global infrastructure: `HttpExceptionFilter`, `SuccessInterceptor`, Guards (`JwtAuthGuard`, `RolesGuard`, `SignatureGuard`)
+- **Common** ([src/common/](src/common/)) - Shared utilities: `CryptoUtil`, `DateUtil`, `@UseSignature()` decorator
+- **Logger** ([src/logger/](src/logger/)) - `LogsModule` with `ActionLog` entity, `LogsService`, `LogsController`, `RequestLogInterceptor`
+- **Auth** ([src/auth/](src/auth/)) - JWT auth with `SignatureService`, `JwtStrategy`
+- **User** ([src/user/](src/user/)) - User entity + DTOs in `entities/` and `dto/` subdirectories
 
-Tests live alongside source files with `.spec.ts` suffix. Jest configuration sets `rootDir: src` so test files are co-located with their source modules.
+Tests live alongside source files with `.spec.ts` suffix.
 
 ## Key Technical Details
 
 - Uses `module: nodenext` and `moduleResolution: nodenext` in TypeScript config
 - Decorator metadata enabled (`emitDecoratorMetadata: true`, `experimentalDecorators: true`)
 - Strict null checks enabled (`strictNullChecks: true`)
-- No database or ORM configured yet
+- TypeORM + PostgreSQL via `DatabaseModule` in `src/database/database.module.ts`
+- ConfigModule loads environment variables via domain-specific configs in `src/config/`
+- Joi `envValidationSchema` validates all env vars at startup
+- Global `HttpExceptionFilter` and `SuccessInterceptor` registered in `main.ts`
 
 ## 路径别名
 
