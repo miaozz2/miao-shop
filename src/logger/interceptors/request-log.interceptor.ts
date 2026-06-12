@@ -33,7 +33,8 @@ export class RequestLogInterceptor implements NestInterceptor {
             method,
             path: url,
             requestBody: JSON.stringify(body),
-            responseBody: typeof data === 'object' ? JSON.stringify(data) : String(data),
+            responseBody:
+              typeof data === 'object' ? JSON.stringify(data) : String(data),
             statusCode: response.statusCode,
             ip,
           });

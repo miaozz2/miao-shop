@@ -17,7 +17,13 @@
  * - 被 user.service.ts create 方法使用
  * - 被 auth.service.ts register 方法调用
  */
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  IsOptional,
+} from 'class-validator';
 
 /**
  * CreateUserDto 类

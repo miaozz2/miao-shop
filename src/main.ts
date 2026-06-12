@@ -148,7 +148,6 @@ bootstrap().catch((err: Error): void => {
   process.exit(1);
 });
 
-
 /**
  * 获取本机 IPv4 地址列表
  *

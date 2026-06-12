@@ -41,7 +41,13 @@ import {
      */
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, jwtConfig, bcryptConfig, signatureConfig, databaseConfig],
+      load: [
+        appConfig,
+        jwtConfig,
+        bcryptConfig,
+        signatureConfig,
+        databaseConfig,
+      ],
       validationSchema: envValidationSchema,
     }),
 

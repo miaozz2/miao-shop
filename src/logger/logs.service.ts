@@ -20,7 +20,9 @@ export class LogsService {
     return this.actionLogRepository.save(this.actionLogRepository.create(data));
   }
 
-  async findAll(query: GetLogsDto): Promise<{ logs: ActionLog[]; total: number }> {
+  async findAll(
+    query: GetLogsDto,
+  ): Promise<{ logs: ActionLog[]; total: number }> {
     const { userId, action, page = 1, limit = 20 } = query;
     const where: any = {};
     if (userId) where.userId = userId;

@@ -213,7 +213,7 @@ export class AuthService {
      * 结果：有效则返回新 Token，无效则抛异常
      */
     try {
-      const payload = this.jwtService.verify(refreshToken) as any;
+      const payload = this.jwtService.verify(refreshToken);
 
       /**
        * 生成新的 Token 对
