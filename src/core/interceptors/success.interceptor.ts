@@ -5,6 +5,10 @@
  * - 所有接口返回一致的成功结构
  * - 统一包装 data、code、message
  *
+ * 设计原则：
+ * - 成功响应：body.code 统一为 200，客户端只需判断 code === 200
+ * - 错误响应：body.code 为具体错误码（400/401/403/500），客户端根据 code 提示
+ *
  * 成功格式：
  * ```json
  * {
@@ -18,7 +22,7 @@
  * 1. 拦截所有响应
  * 2. 检测返回值是否为 ApiResponse 实例
  * 3. 如果是 ApiResponse：直接使用其属性
- * 4. 如果不是：包装为统一格式 { code, data, message }
+ * 4. 如果不是：包装为统一格式，body.code 强制为 200
  *
  * 关联性：
  * - 在 main.ts 中通过 app.useGlobalInterceptors() 注册
@@ -64,31 +68,17 @@ export class SuccessInterceptor<T> implements NestInterceptor<
    * 4. 返回统一格式的响应
    */
   intercept(
-    context: ExecutionContext,
+    _context: ExecutionContext,
     next: CallHandler,
   ): Observable<{ code: number; data: T; message: string }> {
-    /**
-     * 获取 HTTP 上下文
-     * @description 用于提取请求和响应对象
-     */
-    const ctx = context.switchToHttp();
-
-    /**
-     * 获取响应对象
-     * @description 从 HTTP 上下文获取 Response 对象
-     * - 用于读取 statusCode
-     * - 类型标记为可选，因为不是所有环境都有 statusCode
-     */
-    const response = ctx.getResponse<{ statusCode?: number }>();
-
     /**
      * 转换响应数据
      * @description 使用 pipe + map 将原始数据转换为统一格式
      *
      * 转换逻辑：
-     * - 如果是 ApiResponse 实例：提取 code、data、message
-     * - 如果不是：使用默认值包装
-     * - code: 从 ApiResponse 或 response.statusCode 读取
+     * - 如果是 ApiResponse 实例：直接使用其属性
+     * - 如果不是：使用默认值包装，code 强制为 200
+     * - code: 成功统一为 200，错误由 HttpExceptionFilter 处理
      * - message: 从 ApiResponse 或默认值读取
      * - data: 从 ApiResponse 或原始返回值获取
      *
@@ -108,7 +98,7 @@ export class SuccessInterceptor<T> implements NestInterceptor<
           /**
            * 是 ApiResponse 实例
            * @description 直接使用其属性
-           * - code: ApiResponse 的状态码
+           * - code: ApiResponse 的状态码（成功为 200）
            * - data: ApiResponse 的数据
            * - message: ApiResponse 的消息
            */
@@ -122,12 +112,15 @@ export class SuccessInterceptor<T> implements NestInterceptor<
         /**
          * 不是 ApiResponse 实例
          * @description 使用默认值包装
-         * - code: 从 response.statusCode 读取，默认为 200
+         * - code: 统一为 200，不使用 HTTP 状态码
          * - message: 默认为 "操作成功"
          * - data: 原始返回值直接透传
+         *
+         * 注意：即使 HTTP 状态码是 201/204，body.code 仍为 200
+         * 这样客户端只需判断 code === 200 即可
          */
         return {
-          code: response.statusCode || 200,
+          code: 200,
           message: '操作成功',
           data: result,
         };
