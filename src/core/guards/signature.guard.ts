@@ -20,11 +20,7 @@
  * // 发送 X-Signature 头
  * ```
  */
-import {
-  Injectable,
-  ExecutionContext,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, ExecutionContext } from '@nestjs/common';
 import { SignatureService } from '@/auth/services/signature.service';
 
 @Injectable()
@@ -34,7 +30,7 @@ export class SignatureGuard {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const signature = request.headers['x-signature'];
-
+    console.log('SignatureGuard - Received signature:', signature);
     this.signatureService.validateSignature(signature);
     return true;
   }
