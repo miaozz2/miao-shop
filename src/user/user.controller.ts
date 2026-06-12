@@ -9,14 +9,20 @@
  * - GET /api/users/profile - 获取当前用户资料（需登录）
  * - PATCH /api/users/profile - 修改当前用户资料（需登录）
  *
- * 认证说明：
- * - 所有接口都需要 JWT 认证
- * - 使用 @UseGuards(JwtAuthGuard) 保护
- * - 用户信息从 request.user 中获取（由 JwtAuthGuard 填充）
+ * 守卫链：
+ * - @UseGuards(JwtAuthGuard, SignatureGuard)：JWT 身份认证 + 签名验证
+ * - @UseSignature()：标记需要签名验证（SignatureGuard 会读取此标记）
+ * - 执行顺序：先 JwtAuthGuard → 再 SignatureGuard
+ *
+ * 为什么守卫放在类上：
+ * - 类级别的守卫和装饰器会被所有方法继承
+ * - 无需在每个方法上单独添加
+ * - 保持代码简洁，便于维护
  *
  * 关联性：
  * - 被 user.module.ts 注册
  * - 调用 user.service.ts 处理业务逻辑
+ * - UserModule imports AuthModule 提供 SignatureService
  */
 import {
   Controller,
@@ -28,6 +34,7 @@ import {
 } from '@nestjs/common';
 import { UserService } from '@/user/user.service';
 import { JwtAuthGuard } from '@/core/guards/jwt-auth.guard';
+import { SignatureGuard } from '@/core/guards/signature.guard';
 import { UseSignature } from '@/common/decorators/use-signature.decorator';
 
 /**
@@ -35,8 +42,28 @@ import { UseSignature } from '@/common/decorators/use-signature.decorator';
  * @description 声明 UserController 为 NestJS 控制器
  * - 路由前缀：/users
  * - 处理用户相关请求
+ *
+ * @UseGuards(JwtAuthGuard, SignatureGuard) 类级别守卫
+ * @description JWT 身份认证 + 签名验证，所有方法都需要
+ * - JwtAuthGuard：从 Authorization 头提取 Bearer Token，验证 Token 有效性
+ * - SignatureGuard：读取 @UseSignature() 标记，验证 x-signature 头
+ *
+ * @UseSignature() 类级别装饰器
+ * @description 标记此 Controller 所有方法需要签名验证
+ * - SignatureGuard 会读取此标记并执行验证
+ * - 从 X-Signature 头提取签名，AES 解密验证时间戳
+ *
+ * 为什么需要两个：
+ * - @UseGuards 召集守卫执行
+ * - @UseSignature 只是标记，SignatureGuard 需要它才知道要验证
+ *
+ * 为什么放在类上：
+ * - 所有方法都需要 JWT 认证和签名验证
+ * - 放在类上避免每个方法重复添加
  */
 @Controller('users')
+@UseGuards(JwtAuthGuard, SignatureGuard)
+@UseSignature()
 export class UserController {
   /**
    * 构造函数
@@ -62,17 +89,16 @@ export class UserController {
    *
    * 流程：
    * 1. JwtAuthGuard 验证 Token，获取 userId
-   * 2. 从 request.user 提取 userId
-   * 3. 调用 userService.findById() 查询用户信息
-   * 4. 返回用户资料（不包含密码）
+   * 2. SignatureGuard 验证签名（防止重放攻击）
+   * 3. 从 request.user 提取 userId
+   * 4. 调用 userService.findById() 查询用户信息
+   * 5. 返回用户资料（不包含密码）
    *
    * 关联性：
    * - request.user.userId 由 JwtStrategy.validate() 填充
    * - userService.findById() 调用 User entity 的数据库操作
    */
   @Get('profile')
-  @UseGuards(JwtAuthGuard)
-  @UseSignature()
   async getProfile(@Request() req: any) {
     /**
      * @param req - HTTP 请求对象
@@ -101,13 +127,13 @@ export class UserController {
    *
    * 流程：
    * 1. JwtAuthGuard 验证 Token，获取 userId
-   * 2. 从 request.user 提取 userId
-   * 3. 过滤只允许的字段（phone、avatar）
-   * 4. 调用 userService.update() 更新用户
-   * 5. 返回更新后的用户信息
+   * 2. SignatureGuard 验证签名（防止重放攻击）
+   * 3. 从 request.user 提取 userId
+   * 4. 过滤只允许的字段（phone、avatar）
+   * 5. 调用 userService.update() 更新用户
+   * 6. 返回更新后的用户信息
    */
   @Patch('profile')
-  @UseGuards(JwtAuthGuard)
   async updateProfile(@Request() req: any, @Body() updateData: any) {
     /**
      * 提取用户 ID

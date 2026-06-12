@@ -19,7 +19,7 @@
  * - 导入 PassportModule 提供 Passport 策略支持
  * - 导出 Guards 给其他模块使用
  */
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -40,8 +40,12 @@ import type { StringValue } from 'ms';
      * @description 跨模块依赖
      * - AuthService 需要 UserService 进行用户验证
      * - 需要在 UserModule 中 exports UserService
+     *
+     * 为什么需要 forwardRef：
+     * - 解决循环依赖：UserModule imports AuthModule，AuthModule imports UserModule
+     * - forwardRef() 延迟模块解析，避免在初始化时出现循环引用
      */
-    UserModule,
+    forwardRef(() => UserModule),
 
     /**
      * Passport 模块
