@@ -27,7 +27,13 @@ export class RequestLogInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: (data) => {
-          this.logsService.create({
+          /**
+           * fire-and-forget: 不等待日志写入完成
+           * @description 使用 void 显式忽略 Promise，避免未处理的 Promise 警告
+           * - 优点：响应速度快，不阻塞
+           * - 缺点：服务器重启可能丢失日志
+           */
+          void this.logsService.create({
             userId,
             action,
             method,
@@ -40,7 +46,11 @@ export class RequestLogInterceptor implements NestInterceptor {
           });
         },
         error: (error) => {
-          this.logsService.create({
+          /**
+           * fire-and-forget: 不等待日志写入完成
+           * @description 使用 void 显式忽略 Promise，避免未处理的 Promise 警告
+           */
+          void this.logsService.create({
             userId,
             action,
             method,
