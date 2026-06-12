@@ -3,21 +3,21 @@
  *
  * 为什么需要统一响应格式：
  * - 所有接口返回一致的成功结构
- * - 统一包装 data、statusCode、timestamp
+ * - 统一包装 data、code、message
  *
  * 成功格式：
  * ```json
  * {
- *   "statusCode": 200,
+ *   "code": 200,
  *   "data": { ... },
- *   "timestamp": "2024-01-01T00:00:00.000Z"
+ *   "message": "操作成功"
  * }
  * ```
  *
  * 工作原理：
  * 1. 拦截所有响应
  * 2. 使用 map 操作符转换响应数据
- * 3. 统一包装为 { statusCode, data, timestamp } 格式
+ * 3. 统一包装为 { code, data, message } 格式
  *
  * 关联性：
  * - 在 main.ts 中通过 app.useGlobalInterceptors() 注册
@@ -41,7 +41,7 @@ import { map } from 'rxjs/operators';
 @Injectable()
 export class SuccessInterceptor<T> implements NestInterceptor<
   T,
-  { statusCode: number; data: T; timestamp: string }
+  { code: number; data: T; message: string }
 > {
   /**
    * intercept - 拦截方法
@@ -63,7 +63,7 @@ export class SuccessInterceptor<T> implements NestInterceptor<
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<{ statusCode: number; data: T; timestamp: string }> {
+  ): Observable<{ code: number; data: T; message: string }> {
     /**
      * 获取 HTTP 上下文
      * @description 用于提取请求和响应对象
@@ -83,9 +83,9 @@ export class SuccessInterceptor<T> implements NestInterceptor<
      * @description 使用 pipe + map 将原始数据转换为统一格式
      *
      * 转换逻辑：
-     * - statusCode: 从 response.statusCode 读取，默认为 200
+     * - code: 从 response.statusCode 读取，默认为 200
      * - data: 原始返回值，直接透传
-     * - timestamp: ISO 格式时间戳
+     * - message: 操作结果描述，默认为 "操作成功"
      *
      * 为什么使用 map：
      * - rxjs 的 map 操作符用于转换 Observable 发出的值
@@ -100,7 +100,14 @@ export class SuccessInterceptor<T> implements NestInterceptor<
          * - 默认为 200（成功）
          * - 可能是 201（创建）、204（无内容）等
          */
-        statusCode: response.statusCode || 200,
+        code: response.statusCode || 200,
+
+        /**
+         * 响应消息
+         * @description 操作结果描述
+         * - 默认为 "操作成功"
+         */
+        message: '操作成功',
 
         /**
          * 响应数据
@@ -109,14 +116,6 @@ export class SuccessInterceptor<T> implements NestInterceptor<
          * - 可能是任何类型：对象、数组、字符串等
          */
         data,
-
-        /**
-         * 时间戳
-         * @description 响应生成时间
-         * - ISO 8601 格式
-         * - 便于客户端和日志系统使用
-         */
-        timestamp: new Date().toISOString(),
       })),
     );
   }
